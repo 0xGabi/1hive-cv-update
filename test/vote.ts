@@ -15,7 +15,7 @@ const retroactiveFundingMultisig = "0xe6a1b6B98dc978888b0c83DbA2D5fabcF5069312";
 const commonPool = "0x4ba7362F9189572CbB1216819a45aba0d0B2D1CB";
 
 describe.only("Test Conviction Voting Update", () => {
-  it("return funds to common pool and executes the vote #13", async () => {
+  it("return funds to common pool and executes the vote #14", async () => {
     // Return common pool funds
     const multisig = await impersonateAddress(retroactiveFundingMultisig);
     const token = new Contract(
@@ -30,7 +30,9 @@ describe.only("Test Conviction Voting Update", () => {
     const multisigBalance = await token.balanceOf(retroactiveFundingMultisig);
     await (await token.transfer(commonPool, multisigBalance)).wait();
 
-    // Execute vote #13
+    expect(await token.balanceOf(commonPool)).to.be.greaterThan(BigNumber.from(10).pow(18).mul(8000));
+
+    // Execute vote #14
     const signer = await impersonateAddress(gardenHolder);
     const voting = new Contract(
       "0xfbd0b2726070a9d6aff6d7216c9e9340eae68b2a",
@@ -41,9 +43,9 @@ describe.only("Test Conviction Voting Update", () => {
       signer,
     );
 
-    const voteId = 13;
+    const voteId = 14;
     const executionScript =
-      "0x000000010b21081c6f8b1990f53fc76279cc41ba22d7afe200000084c35ac76d00000000000000000000000000000000000000000000000000000000009895b700000000000000000000000000000000000000000000000000000000001e848000000000000000000000000000000000000000000000000000000000000009c400000000000000000000000000000000000000000000000002c68af0bb140000";
+      "0x000000010b21081c6f8b1990f53fc76279cc41ba22d7afe200000084c35ac76d00000000000000000000000000000000000000000000000000000000009895b700000000000000000000000000000000000000000000000000000000001e8480000000000000000000000000000000000000000000000000000000000000271000000000000000000000000000000000000000000000000002c68af0bb140000";
 
     for (const gardenVoter of gardenVoters) {
       await voting.connect(await impersonateAddress(gardenVoter)).vote(voteId, true, { gasLimit: 10_000_000 });
@@ -67,7 +69,7 @@ describe.only("Test Conviction Voting Update", () => {
 
     expect(await conviction.decay()).to.equal(9999799);
     expect(await conviction.maxRatio()).to.equal(2000000);
-    expect(await conviction.weight()).to.equal(2500);
+    expect(await conviction.weight()).to.equal(10000);
     expect((await conviction.minThresholdStakePercentage()).toString()).to.equal("200000000000000000");
   });
 
@@ -94,6 +96,7 @@ describe.only("Test Conviction Voting Update", () => {
         "function stakeToProposal(uint256 _proposalId, uint256 _amount)",
         "function executeProposal(uint256 _proposalId)",
         "event ProposalExecuted(uint256 indexed id, uint256 conviction)",
+        "function getProposal(uint256 _proposalId) external view returns (uint256 requestedAmount, bool stableRequestAmount, address beneficiary, uint256 stakedTokens, uint256 convictionLast, uint64 blockLast, uint256 agreementActionId, uint8 proposalStatus, address submitter, uint256 threshold)",
       ],
       signer,
     );
@@ -109,8 +112,20 @@ describe.only("Test Conviction Voting Update", () => {
         .stakeToProposal(proposalId, BigNumber.from(10).pow(18).mul(400), { gasLimit: 10_000_000 });
     }
 
+    console.log(await conviction.getProposal(proposalId));
+
     await increase(String(30 * 24 * 60 * 60)); // 60 days
-    await expect(conviction.executeProposal(139)).to.emit(conviction, "ProposalExecuted");
+
+    await conviction
+      .connect(await impersonateAddress(gardenVoters[0]))
+      .stakeToProposal(proposalId, 1, { gasLimit: 10_000_000 });
+
+    console.log(await conviction.getProposal(proposalId));
+
+    await expect(conviction.executeProposal(proposalId, { gasLimit: 10_000_000 })).to.emit(
+      conviction,
+      "ProposalExecuted",
+    );
   });
 
   it("do not allow to pass a proposal quickly", async () => {
