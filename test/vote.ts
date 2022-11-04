@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
+import { BigNumber, Contract, utils } from "ethers";
 import hre, { ethers } from "hardhat";
 
 const gardenHolder = "0x5b0F8D8f47E3fDF7eE1c337AbCA19dBba98524e6";
@@ -50,7 +50,7 @@ describe.only("Test Conviction Voting Update", () => {
     for (const gardenVoter of gardenVoters) {
       await voting.connect(await impersonateAddress(gardenVoter)).vote(voteId, true, { gasLimit: 10_000_000 });
     }
-    await increase(String(30 * 24 * 60 * 60));
+    await mine((30 * 24 * 60 * 60) / 5, 5);
     await (await voting.executeVote(voteId, executionScript)).wait();
   });
 
@@ -112,15 +112,7 @@ describe.only("Test Conviction Voting Update", () => {
         .stakeToProposal(proposalId, BigNumber.from(10).pow(18).mul(400), { gasLimit: 10_000_000 });
     }
 
-    console.log(await conviction.getProposal(proposalId));
-
-    await increase(String(30 * 24 * 60 * 60)); // 60 days
-
-    await conviction
-      .connect(await impersonateAddress(gardenVoters[0]))
-      .stakeToProposal(proposalId, 1, { gasLimit: 10_000_000 });
-
-    console.log(await conviction.getProposal(proposalId));
+    await mine((30 * 24 * 60 * 60) / 5, 5); // 30 days
 
     await expect(conviction.executeProposal(proposalId, { gasLimit: 10_000_000 })).to.emit(
       conviction,
@@ -152,7 +144,7 @@ describe.only("Test Conviction Voting Update", () => {
         .stakeToProposal(proposalId, BigNumber.from(10).pow(18).mul(300), { gasLimit: 10_000_000 });
     }
 
-    await increase(String(10 * 60)); // 10 minutes
+    await mine((10 * 60) / 5, 5); // 10 minutes
     await expect(conviction.executeProposal(proposalId)).to.be.revertedWith("CV_INSUFFICIENT_CONVICION");
   });
 });
@@ -166,6 +158,13 @@ export const impersonateAddress = async (address: string) => {
   const signer = await ethers.provider.getSigner(address);
 
   return signer;
+};
+
+export const mine = async (blocks: number, interval: number) => {
+  await hre.network.provider.send("hardhat_mine", [
+    utils.hexlify(blocks).replace("0x0", "0x"),
+    utils.hexlify(interval).replace("0x0", "0x"),
+  ]);
 };
 
 export const increase = async (duration: string | BigNumber) => {
