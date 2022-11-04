@@ -84,7 +84,6 @@ const config: HardhatUserConfig = {
       // chainId: chainIds.hardhat,
       forking: {
         url: "https://rpc.gnosischain.com",
-        blockNumber: 24850000,
       },
     },
     arbitrum: getChainConfig("arbitrum-mainnet"),
