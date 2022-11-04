@@ -81,7 +81,11 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic,
       },
-      chainId: chainIds.hardhat,
+      // chainId: chainIds.hardhat,
+      forking: {
+        url: "https://rpc.gnosischain.com",
+        blockNumber: 24850000,
+      },
     },
     arbitrum: getChainConfig("arbitrum-mainnet"),
     avalanche: getChainConfig("avalanche"),
